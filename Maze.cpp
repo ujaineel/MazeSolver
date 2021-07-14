@@ -107,8 +107,8 @@ std::vector<int> Maze::solve() const {
     }
 
     // Initialize further data for maze navigation.
-    int nextCellind = 0;    //Hard-coded since maze starts at 0.
-    cell_t cell = deepMaze->retrieve(nextCellind);
+    int nextCellind = 0, prevCellind = VACANT;    //Hard-coded since maze starts at 0.
+    cell_t cell;
     neighbor_t cellNeighbors;
     stack.push(src_dest_t(VACANT, nextCellind));
     /*
@@ -117,37 +117,36 @@ std::vector<int> Maze::solve() const {
         Stack the current maze cell on the top. Check its neighbors. 
         Go to the one which is not accessed and is accessible. Add it to top of stack.
         If no neigbors/reach deadend then pop it from stack and backtrack.
+
     */
-
-    while (!stack.empty() || nextCellind != _ncell - 1) {
-        // Get neighbors of a cell.
-        cellNeighbors = deepMaze->retrieve(nextCellind).neighbors;
-    
-        // Check if we have to backtrack.
-        if (std::count(cellNeighbors.begin(), cellNeighbors.end(), VACANT) == 3 && std::count(cellNeighbors.begin(), cellNeighbors.end(), nextCellind) == 1) {
-            nextCellind = stack.pop().first;
-            cellNeighbors = deepMaze->retrieve(nextCellind).neighbors;
-            std::replace_if(cellNeighbors.begin(), cellNeighbors.end(), [&](int i) {return i == nextCellind; }, VACANT);
-        }
-
-        else {
-            // If no backtracking needed.
-            for (int i = 0; i < cellNeighbors.size(); i++) {
-                if (cellNeighbors.at(i) != VACANT && cellNeighbors.at(i) != nextCellind) {
-                    stack.push(src_dest_t(nextCellind, cellNeighbors.at(i)));
-                }
+    while (!stack.empty() && nextCellind != _ncell - 1) {
+        std::cout << prevCellind << " -> " << nextCellind << std::endl;
+        path.push_back(nextCellind);
+        cell = deepMaze->retrieve(nextCellind);
+        cellNeighbors = cell.neighbors;
+        
+        // Add neighbors to stack if not -1/Walls/Obstacles.
+        for (int i = 0; i < cellNeighbors.size(); i++) {
+            if (cellNeighbors.at(i) != -1 && cellNeighbors.at(i) != prevCellind) {
+                stack.push(src_dest_t(nextCellind, cellNeighbors.at(i)));
+                cell.neighbors.at(i) = -1;
             }
-            nextCellind = stack.read().second;
         }
 
-        if (std::count(cellNeighbors.begin(), cellNeighbors.end(), VACANT) == 4) {
-            return {};
+        if (!stack.empty()) {
+            src_dest_t popped = stack.pop();
+            prevCellind = popped.first;
+            nextCellind = popped.second;
         }
     }
-    std::cout << "DOne ! " << std::endl;
+    std::cout << "Done ! " << std::endl;
     
+    if (stack.empty() || nextCellind != _ncell - 1) {
+        path.clear();
+    }
+
     while (!stack.empty()) {
-        path.push_back(stack.pop().second);
+        stack.pop();
     }
 
     return path;
